@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunil Live Esports - 3D Tournament Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+
+    <style>
+        html { scroll-behavior: smooth; scroll-padding-top: 100px; }
+        body { font-family: 'Rajdhani', sans-serif; background-color: #000; background-image: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #000000 100%); color: white; overflow-x: hidden; margin: 0; perspective: 1000px; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        h1, h2, h3, input, button, select { font-family: 'Orbitron', sans-serif; }
+        #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+        #joinersList { position: fixed; bottom: 20px; left: 20px; z-index: 40; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        #toast-container { position: fixed; top: 10%; right: 5%; z-index: 1000; }
+        .btn-3d-cyan { background: linear-gradient(to bottom, #06b6d4, #0891b2); color: white; border: none; border-radius: 4px; box-shadow: 0px 4px 0px 0px #155e75, 0px 0px 15px rgba(6, 182, 212, 0.6); transition: all 0.1s; position: relative; top: 0; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; clip-path: polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%); }
+        .btn-3d-cyan:active { top: 4px; box-shadow: 0px 0px 0px 0px #155e75; }
+        .btn-3d-cyan:disabled { background: #374151; color: #9ca3af; box-shadow: none; cursor: not-allowed; transform: none; opacity: 0.7; }
+        .btn-3d-glass { background: rgba(0, 0, 0, 0.4); color: #fbbf24; border: 1px solid #fbbf24; border-radius: 4px; box-shadow: 0px 0px 10px rgba(251, 191, 36, 0.2); transition: all 0.1s; position: relative; top: 0; backdrop-filter: blur(2px); cursor: pointer; text-transform: uppercase; letter-spacing: 1px; clip-path: polygon(0 0, 90% 0, 100% 20%, 100% 100%, 10% 100%, 0 80%); }
+        .glass-panel { background: rgba(10, 10, 20, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(6, 182, 212, 0.2); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); transition: transform 0.2s; transform-style: preserve-3d; border-bottom: 3px solid #06b6d4; }
+        .glass-panel:hover { border-color: #fbbf24; border-bottom-color: #fbbf24; }
+        .neon-text { text-shadow: 0 0 10px #06b6d4, 0 0 20px #fbbf24; }
+        @keyframes floatTrophy { 0% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-15px) rotate(5deg); } 100% { transform: translateY(0px) rotate(0deg); } }
+        .trophy-3d { animation: floatTrophy 3s ease-in-out infinite; }
+        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; background: #000; }
+        .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+        .video-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.3); pointer-events: none; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="canvas-container"></div>
+    <div id="joinersList"></div>
+    <div id="toast-container"></div>
+
+    <nav class="fixed w-full z-50 border-b border-cyan-500/20 bg-black/80 backdrop-blur-md">
+        <div class="container mx-auto px-4 py-2 md:py-3 flex flex-col md:flex-row justify-between items-center gap-2 md:gap-0">
+            <div class="flex items-center justify-between w-full md:w-auto">
+                <div class="flex items-center gap-3">
+                    <img src="13339.jpg" onerror="this.src='https://cdn-icons-png.flaticon.com/512/147/147144.png'" alt="Logo" class="w-10 h-10 rounded-full border-2 border-cyan-400 object-cover shadow-[0_0_10px_#22d3ee]">
+                    <span class="text-xl font-bold tracking-widest text-white font-orbitron">SUNIL <span class="text-yellow-400">LIVE</span></span>
+                </div>
+            </div>
+            <div class="flex gap-3 md:gap-4 w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0 items-center justify-center md:justify-end">
+                <button onclick="toggleLanguage()" class="btn-3d-glass px-3 py-2 text-xs font-bold no-underline border-cyan-500 text-cyan-300 hover:text-white whitespace-nowrap flex-shrink-0 flex items-center gap-1" id="langBtn"><i class="fa-solid fa-globe"></i> <span id="currentLang">EN/HI</span></button>
+                <button onclick="openForm('General Entry')" class="btn-3d-cyan px-4 py-2 font-bold uppercase tracking-wider text-xs md:text-sm no-underline whitespace-nowrap flex-shrink-0"><span data-key="join_war">JOIN WAR</span></button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative z-10 pt-32 md:pt-28 pb-12 container mx-auto px-4">
+        
+        <section class="min-h-[60vh] md:min-h-[80vh] flex flex-col justify-center items-center text-center mb-16">
+            <div class="tilt-card p-4 md:p-10 rounded-2xl border border-cyan-500/20 bg-black/40 backdrop-blur-md max-w-4xl mx-auto shadow-[0_0_50px_rgba(6,182,212,0.1)] w-full">
+                <div class="mb-6 rounded-xl overflow-hidden shadow-[0_0_30px_rgba(251,191,36,0.2)] border border-yellow-500/30 relative group transform translate-z-20">
+                    <div class="video-container">
+                        <iframe src="https://www.youtube.com/embed/9iW-sL7Upt0?autoplay=1&mute=1&loop=1&playlist=9iW-sL7Upt0&controls=0&showinfo=0&rel=0&modestbranding=1" title="Background Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        <div class="video-overlay"></div>
+                    </div>
+                    <div class="absolute bottom-4 left-4 z-20 text-left pointer-events-none"><span class="bg-cyan-600 text-white text-[10px] md:text-xs px-2 py-1 rounded font-bold shadow-lg uppercase">OFFICIAL GUIDE</span></div>
+                </div>
+                <h1 class="hero-title text-3xl md:text-7xl font-black mb-4 uppercase tracking-tighter cursor-default"><span data-key="welcome_to">WELCOME TO</span> <br> <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-yellow-500 neon-text">BATTLEGROUND</span></h1>
+                <p class="text-sm md:text-2xl text-gray-300 mb-8 font-light max-w-3xl mx-auto drop-shadow-lg"><span data-key="hero_desc">The Ultimate Free Fire Tournament Platform.</span></p>
+                <div class="flex flex-col md:flex-row gap-4 justify-center items-center perspective-1000">
+                    <button onclick="scrollToMatches()" class="btn-3d-cyan px-8 py-3 text-lg font-black w-full md:w-64 text-center no-underline flex items-center justify-center"><span data-key="view_matches">VIEW MATCHES</span></button>
+                </div>
+                <div class="mt-6"><button onclick="openNameGen()" class="text-xs md:text-sm text-cyan-400 hover:text-white hover:underline flex items-center justify-center gap-2 mx-auto"><i class="fa-solid fa-bolt"></i> <span data-key="need_name">Need a name? Use</span> <b>Pro Generator</b></button></div>
+            </div>
+        </section>
+
+        <section id="rules" class="mb-16">
+            <div class="container mx-auto px-0 md:px-4 max-w-4xl">
+                <div class="glass-panel p-6 rounded-xl border border-yellow-500/30">
+                    <h2 class="text-2xl md:text-3xl font-bold text-white mb-6 text-center"><i class="fa-solid fa-scroll text-yellow-500 mr-2"></i> <span data-key="tourney_details">DETAILS</span></h2>
+                    
+                    <div class="bg-red-900/20 border-l-4 border-red-600 p-3 rounded mb-6 flex items-start gap-4 animate-pulse-fast">
+                        <div class="bg-red-600/20 p-1 rounded-full border border-red-500/50 flex-shrink-0"><span class="font-black text-red-500 text-lg">18+</span></div>
+                        <div><h3 class="text-sm font-bold text-red-400 uppercase tracking-wider" data-key="age_policy_title">Strictly 18+ Only</h3><p class="text-xs text-gray-300 mt-1" data-key="age_policy_text">Is tournament mein hissa lene ke liye aapki umar 18 saal ya usse zyada honi chahiye.</p></div>
+                    </div>
+
+                    <div class="space-y-6 text-gray-300">
+                        <div class="bg-black/20 p-6 rounded-lg border-l-4 border-yellow-500 relative overflow-hidden">
+                            <h3 class="text-xl font-bold text-white mb-4 border-b border-gray-700 pb-2">🏆 <span data-key="offline_title">OFFLINE LAN EVENT</span></h3>
+                            <div class="flex flex-col md:flex-row gap-6 items-start">
+                                <div class="flex-1 text-sm space-y-2">
+                                    <p><strong class="text-yellow-400">Kya Hoga:</strong> Sabhi players ek jagah (LAN) par baith kar khelenge. Full competitive environment!</p>
+                                    <ul class="list-disc pl-5 space-y-1">
+                                        <li><strong class="text-yellow-400">Location:</strong> Vikash Mobile Shop ke Samne, Bara Khas, Bara, Prayagraj</li>
+                                        <li><strong class="text-yellow-400">Date & Time:</strong> 10th December, 02:30 PM</li>
+                                        <li><strong class="text-yellow-400">Entry:</strong> ₹50</li>
+                                        <li><strong class="text-yellow-400">Prizes:</strong>
+                                            <ul class="list-none pl-4 mt-1 text-sm space-y-1">
+                                                <li>🥇 1st: <span class="text-green-400 font-bold">₹750 + TROPHY 🏆</span></li>
+                                                <li>🥈 2nd: <span class="text-green-400 font-bold">₹400</span></li>
+                                                <li>🥉 3rd: <span class="text-green-400 font-bold">₹250</span></li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="flex-shrink-0 hidden md:block"><img src="trophy.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3112/3112946.png'" class="w-24 h-24 object-contain animate-bounce"></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-black/20 p-6 rounded-lg border-l-4 border-cyan-500 relative overflow-hidden">
+                            <h3 class="text-xl font-bold text-white mb-4 border-b border-gray-700 pb-2">🎮 ONLINE PLAYERS</h3>
+                            <div class="text-sm space-y-2">
+                                <p><strong class="text-cyan-400">Kya Hoga:</strong> Jo players location par nahi aa sakte, wo apne ghar se Online join kar sakte hain.</p>
+                                <ul class="list-disc pl-5 space-y-2">
+                                    <li><strong class="text-cyan-400">Prize Pool:</strong>
+                                        <ul class="list-none pl-4 mt-1 text-sm space-y-1">
+                                            <li>🥇 1st: <span class="text-green-400 font-bold">₹500</span></li>
+                                            <li>🥈 2nd: <span class="text-green-400 font-bold">₹250</span></li>
+                                            <li>🥉 3rd: <span class="text-green-400 font-bold">₹150</span></li>
+                                        </ul>
+                                    </li>
+                                    <li><strong class="text-cyan-400">No Trophy:</strong> Online winners ko Trophy nahi milegi.</li>
+                                    <li><strong class="text-cyan-400">Process:</strong> Register karne ke baad WhatsApp group join karein.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="bg-gradient-to-r from-purple-900/20 to-black p-4 rounded-lg border border-purple-500">
+                            <h3 class="text-lg font-black text-white mb-1 flex items-center gap-2"><i class="fa-solid fa-gift text-purple-400"></i> <span class="text-purple-500">LOOT OFFER</span></h3>
+                            <p class="text-gray-200 text-xs">Join All Social Media Channels = <span class="text-green-400 font-bold">₹100 EXTRA CASH</span> on winning! 🤑</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tournaments" class="mb-16">
+            <div class="container mx-auto px-4 mb-10">
+                <div class="bg-red-900/30 border-l-4 border-red-500 p-4 rounded-r-lg flex items-start gap-4 shadow-[0_0_15px_rgba(239,68,68,0.2)] transform hover:scale-[1.01] transition duration-300">
+                    <i class="fa-solid fa-triangle-exclamation text-red-500 text-2xl mt-1 animate-bounce"></i>
+                    <div><h4 class="text-red-400 font-black uppercase text-sm tracking-wider mb-1">⚠️ IMPORTANT REMINDER</h4><p class="text-gray-200 text-sm leading-relaxed">Please read <a href="#rules" class="text-yellow-400 underline">RULES</a> before joining.</p></div>
+                </div>
+            </div>
+
+            <h2 class="text-3xl md:text-4xl font-bold mb-8 text-center text-white border-b border-gray-800 pb-4">MATCH <span class="text-cyan-400">ZONES</span></h2>
+            
+            <!-- OFFLINE LAN -->
+            <div class="mb-12">
+                <div class="flex items-center gap-4 mb-4 px-4"><div class="h-1 flex-1 bg-yellow-600/50"></div><h3 class="text-xl md:text-2xl font-bold text-yellow-500 flex items-center"><i class="fa-solid fa-location-dot mr-2"></i>OFFLINE LAN</h3><div class="h-1 flex-1 bg-yellow-600/50"></div></div>
+                <div class="flex md:grid md:grid-cols-3 gap-4 md:gap-8 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-4 no-scrollbar px-4 md:px-0">
+                    
+                    <!-- Offline Solo -->
+                    <div class="flex-shrink-0 w-80 md:w-auto snap-center tilt-card glass-panel rounded-xl overflow-hidden group border-2 border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.2)]">
+                        <div class="h-32 md:h-40 bg-gray-900/40 relative transform-style-3d">
+                            <div class="absolute inset-0 bg-[url('https://image.pollinations.ai/prompt/Free%20Fire%20Solo%20Player%20holding%20gun%20cinematic%20lighting%20realistic%20gaming%20wallpaper?width=600&height=400&nologo=true')] bg-cover bg-center opacity-80 group-hover:opacity-100 transition duration-500"></div>
+                            <div class="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 text-[10px] font-bold rounded animate-pulse">OPEN</div>
+                            <div class="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-yellow-400 text-xs font-bold">SOLO</div>
+                        </div>
+                        <div class="p-4 relative transform-style-3d">
+                            <h3 class="text-xl font-bold text-white mb-1">Offline Solo King</h3>
+                            <p class="text-[10px] text-gray-400 mb-2">Bara, Jasra (LAN Event)</p>
+                            <div class="bg-black/30 p-2 rounded mb-3 border border-yellow-500/30 space-y-1">
+                                <div class="flex justify-between text-xs border-b border-gray-700 pb-1 mb-1"><span class="text-yellow-400">Entry:</span> <span class="text-white font-bold">₹50</span></div>
+                                <div class="flex justify-between text-xs"><span class="text-green-400">🥇 1st:</span> <span class="text-white font-bold">₹750 + 🏆</span></div>
+                                <div class="flex justify-between text-xs"><span class="text-green-400">🥈 2nd:</span> <span class="text-white font-bold">₹400</span></div>
+                                <div class="flex justify-between text-xs"><span class="text-green-400">🥉 3rd:</span> <span class="text-white font-bold">₹250</span></div>
+                            </div>
+                            <button onclick="openForm('Offline Solo Battle')" class="btn-3d-cyan w-full py-2 font-black uppercase tracking-widest text-sm transform translate-z-30">JOIN NOW</button>
+                        </div>
+                    </div>
+
+                    <!-- Offline Duo (RESTORED) -->
+                    <div class="flex-shrink-0 w-80 md:w-auto snap-center tilt-card glass-panel rounded-xl overflow-hidden group opacity-75 hover:opacity-100 transition">
+                        <div class="h-32 md:h-40 bg-gray-900/40 relative">
+                            <div class="absolute inset-0 bg-[url('https://image.pollinations.ai/prompt/Two%20Free%20Fire%20characters%20back%20to%20back%20team%20duo%20battle%20royale%20intense?width=600&height=400&nologo=true')] bg-cover bg-center opacity-40 grayscale group-hover:grayscale-0 transition duration-500"></div>
+                            <div class="absolute top-2 right-2 bg-gray-600 text-white px-2 py-1 text-[10px] font-bold rounded">SOON</div>
+                            <div class="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-gray-400 text-xs font-bold">DUO</div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-xl font-bold text-gray-500 mb-1">Offline Duo</h3>
+                            <p class="text-[10px] text-gray-600 mb-3">Coming Soon</p>
+                            <button disabled class="w-full bg-gray-800 text-gray-500 py-2 font-bold uppercase text-sm cursor-not-allowed">Coming Soon</button>
+                        </div>
+                    </div>
+
+                    <!-- Offline Squad (RESTORED) -->
+                    <div class="flex-shrink-0 w-80 md:w-auto snap-center tilt-card glass-panel rounded-xl overflow-hidden group opacity-75 hover:opacity-100 transition">
+                        <div class="h-32 md:h-40 bg-gray-900/40 relative">
+                            <div class="absolute inset-0 bg-[url('https://image.pollinations.ai/prompt/Free%20Fire%20Squad%20Team%20of%204%20players%20posing%20heroic%20uniform%20esports?width=600&height=400&nologo=true')] bg-cover bg-center opacity-40 grayscale group-hover:grayscale-0 transition duration-500"></div>
+                            <div class="absolute top-2 right-2 bg-gray-600 text-white px-2 py-1 text-[10px] font-bold rounded">SOON</div>
+                            <div class="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-gray-400 text-xs font-bold">SQUAD</div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-xl font-bold text-gray-500 mb-1">Offline Squad</h3>
+                            <p class="text-[10px] text-gray-600 mb-3">Coming Soon</p>
+                            <button disabled class="w-full bg-gray-800 text-gray-500 py-2 font-bold uppercase text-sm cursor-not-allowed">Coming Soon</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ONLINE SECTION -->
+            <div class="mb-12">
+                <div class="flex items-center gap-4 mb-4 px-4"><div class="h-1 flex-1 bg-cyan-600/50"></div><h3 class="text-xl md:text-2xl font-bold text-cyan-500 flex items-center"><i class="fa-solid fa-wifi mr-2"></i>ONLINE</h3><div class="h-1 flex-1 bg-cyan-600/50"></div></div>
+                <div class="flex md:grid md:grid-cols-3 gap-4 md:gap-8 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-4 no-scrollbar px-4 md:px-0">
+                    
+                    <!-- Online Solo -->
+                    <div class="flex-shrink-0 w-80 md:w-auto snap-center tilt-card glass-panel rounded-xl overflow-hidden group border-2 border-cyan-500 shadow-[0_0_20px_rgba(34,211,238,0.3)]">
+                        <div class="h-32 md:h-40 bg-gray-900/40 relative transform-style-3d">
+                            <div class="absolute inset-0 bg-[url('https://image.pollinations.ai/prompt/Free%20Fire%20Cyberpunk%20Solo%20Sniper%20Player%20Neon%20Blue?width=600&height=400&nologo=true')] bg-cover bg-center opacity-80 group-hover:opacity-100 transition duration-500"></div>
+                            <div class="absolute top-2 right-2 bg-cyan-600 text-white px-2 py-1 text-[10px] font-bold rounded animate-pulse">OPEN</div>
+                            <div class="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-cyan-400 text-xs font-bold">SOLO</div>
+                        </div>
+                        <div class="p-4 relative transform-style-3d">
+                            <h3 class="text-xl font-bold text-white mb-1">Online Solo Rush</h3>
+                            <p class="text-[10px] text-gray-400 mb-2">Play from Home</p>
+                            <div class="bg-black/30 p-2 rounded mb-3 border border-cyan-500/30 space-y-1">
+                                <div class="flex justify-between text-xs border-b border-gray-700 pb-1 mb-1"><span class="text-cyan-400">Entry:</span> <span class="text-white font-bold">₹50</span></div>
+                                <div class="flex justify-between text-xs"><span class="text-green-400">🥇 1st:</span> <span class="text-white font-bold">₹500</span></div>
+                                <div class="flex justify-between text-xs"><span class="text-green-400">🥈 2nd:</span> <span class="text-white font-bold">₹250</span></div>
+                                <div class="flex justify-between text-xs"><span class="text-green-400">🥉 3rd:</span> <span class="text-white font-bold">₹150</span></div>
+                            </div>
+                            <button onclick="openForm('Online Solo Battle')" class="btn-3d-glass w-full py-2 font-black uppercase tracking-widest text-sm transform translate-z-30 hover:bg-cyan-600 border-cyan-500 text-cyan-400 hover:text-white">JOIN ONLINE</button>
+                        </div>
+                    </div>
+
+                    <!-- Online Duo (RESTORED) -->
+                    <div class="flex-shrink-0 w-80 md:w-auto snap-center tilt-card glass-panel rounded-xl overflow-hidden group opacity-75 hover:opacity-100 transition">
+                        <div class="h-32 md:h-40 bg-gray-900/40 relative">
+                            <div class="absolute inset-0 bg-[url('https://image.pollinations.ai/prompt/Free%20Fire%20Futuristic%20Duo%20Team%20running%20action%20shot?width=600&height=400&nologo=true')] bg-cover bg-center opacity-40 grayscale group-hover:grayscale-0 transition duration-500"></div>
+                            <div class="absolute top-2 right-2 bg-gray-600 text-white px-2 py-1 text-[10px] font-bold rounded">SOON</div>
+                            <div class="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-gray-400 text-xs font-bold">DUO</div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-xl font-bold text-gray-500 mb-1">Online Duo</h3>
+                            <p class="text-[10px] text-gray-600 mb-3">Coming Soon</p>
+                            <button disabled class="w-full bg-gray-800 text-gray-500 py-2 font-bold uppercase text-sm cursor-not-allowed">Coming Soon</button>
+                        </div>
+                    </div>
+
+                    <!-- Online Squad (RESTORED) -->
+                    <div class="flex-shrink-0 w-80 md:w-auto snap-center tilt-card glass-panel rounded-xl overflow-hidden group opacity-75 hover:opacity-100 transition">
+                        <div class="h-32 md:h-40 bg-gray-900/40 relative">
+                            <div class="absolute inset-0 bg-[url('https://image.pollinations.ai/prompt/Free%20Fire%20Esports%20Squad%20Winning%20Trophy%20Moment%20Stage?width=600&height=400&nologo=true')] bg-cover bg-center opacity-40 grayscale group-hover:grayscale-0 transition duration-500"></div>
+                            <div class="absolute top-2 right-2 bg-gray-600 text-white px-2 py-1 text-[10px] font-bold rounded">SOON</div>
+                            <div class="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-gray-400 text-xs font-bold">SQUAD</div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-xl font-bold text-gray-500 mb-1">Online Squad</h3>
+                            <p class="text-[10px] text-gray-600 mb-3">Coming Soon</p>
+                            <button disabled class="w-full bg-gray-800 text-gray-500 py-2 font-bold uppercase text-sm cursor-not-allowed">Coming Soon</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CLASH SQUAD SECTION -->
+            <div>
+                <div class="flex items-center gap-4 mb-4 px-4"><div class="h-1 flex-1 bg-purple-600/50"></div><h3 class="text-xl md:text-2xl font-bold text-purple-500 flex items-center"><i class="fa-solid fa-people-group mr-2"></i>CLASH SQUAD</h3><div class="h-1 flex-1 bg-purple-600/50"></div></div>
+                <div class="flex md:grid md:grid-cols-3 gap-4 md:gap-8 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-4 no-scrollbar px-4 md:px-0">
+                    <!-- CS Rank (Soon) -->
+                    <div class="flex-shrink-0 w-80 md:w-auto snap-center tilt-card glass-panel rounded-xl overflow-hidden group opacity-75">
+                        <div class="h-32 md:h-40 bg-gray-900/40 relative transform-style-3d">
+                            <div class="absolute inset-0 bg-[url('https://image.pollinations.ai/prompt/Free%20Fire%20Clash%20Squad%204vs4%20faceoff%20red%20vs%20blue?width=600&height=400&nologo=true')] bg-cover bg-center opacity-50 grayscale group-hover:grayscale-0 transition duration-500"></div>
+                            <div class="absolute top-2 right-2 bg-purple-600 text-white px-2 py-1 text-[10px] font-bold rounded shadow-lg">SOON</div>
+                            <div class="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-purple-400 text-xs font-bold">CS RANK</div>
+                        </div>
+                        <div class="p-4 relative transform-style-3d">
+                            <h3 class="text-xl font-bold text-gray-400 mb-1">CS Rank Push</h3>
+                            <p class="text-[10px] text-gray-500 mb-2">4v4 Battle</p>
+                            <div class="bg-black/30 p-2 rounded mb-3 border border-gray-700">
+                                <div class="flex justify-between text-xs mb-1"><span class="text-gray-500">Entry:</span> <span class="text-gray-500">Soon</span></div>
+                                <div class="flex justify-between text-xs"><span class="text-gray-500">Pool:</span> <span class="text-gray-500">₹300</span></div>
+                            </div>
+                            <button disabled class="w-full bg-gray-800 text-gray-500 py-2 font-bold uppercase text-sm cursor-not-allowed border border-gray-700">Coming Soon</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="location" class="mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold mb-8 text-center text-white border-b border-gray-800 pb-4">OUR <span class="text-cyan-400">BASE</span></h2>
+            <div class="container mx-auto px-4 max-w-4xl">
+                <div class="tilt-card glass-panel p-2 rounded-xl border border-cyan-500/30 relative group">
+                    <div class="h-[300px] md:h-[400px] w-full rounded-lg overflow-hidden bg-gray-900/40 relative transform-style-3d">
+                        <iframe src="https://maps.google.com/maps?q=Vikash%20Mobile%20Shop%20ke%20Samne%20Bara%20Khas%20Jasra%20Prayagraj&t=&z=17&ie=UTF8&iwloc=&output=embed" width="100%" height="100%" style="border:0; filter: grayscale(100%) invert(92%) contrast(83%);" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        <div class="absolute bottom-4 left-4 bg-black/60 px-4 py-2 rounded border-l-4 border-cyan-500 transform translate-z-20 backdrop-blur-sm"><h4 class="text-cyan-500 font-bold">SUNIL ESPORTS HQ</h4><p class="text-xs text-gray-400">Vikash Mobile Shop ke Samne, Bara Khas, Jasra, Prayagraj</p><a href="https://www.google.com/maps/search/?api=1&query=Vikash+Mobile+Shop+ke+Samne+Bara+Khas+Jasra+Prayagraj" target="_blank" class="mt-2 inline-block bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold px-3 py-1 rounded no-underline">📍 OPEN EXACT LOCATION</a></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="socials" class="mb-32">
+            <h2 class="text-3xl md:text-4xl font-bold mb-8 text-center text-cyan-500 border-b border-gray-800 pb-4 inline-block w-full" style="text-shadow: 0 5px 15px rgba(34, 211, 238, 0.5);">CONNECT</h2>
+            <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+                <a href="https://youtube.com/@sunillive01?si=Dv-LOox3ZH2rzfI0" target="_blank" class="tilt-card glass-panel p-4 md:p-6 rounded-xl flex flex-col items-center justify-center group h-48 md:h-64 cursor-pointer text-white no-underline relative overflow-hidden"><div class="absolute inset-0 bg-red-600 opacity-0 group-hover:opacity-10 transition"></div><i class="fa-brands fa-youtube text-5xl md:text-7xl text-red-500 mb-4"></i><h3 class="font-bold">Sunil Live</h3><div class="bg-red-600 px-2 py-1 rounded text-xs mt-2">YOUTUBE</div></a>
+                <a href="https://www.instagram.com/sunil_live_1?igsh=MXF5cnY3NHh4dTl5aA==" target="_blank" class="tilt-card glass-panel p-4 md:p-6 rounded-xl flex flex-col items-center justify-center group h-48 md:h-64 cursor-pointer text-white no-underline relative overflow-hidden"><div class="absolute inset-0 bg-pink-600 opacity-0 group-hover:opacity-10 transition"></div><i class="fa-brands fa-instagram text-5xl md:text-7xl text-pink-500 mb-4"></i><h3 class="font-bold">Sunil live 01</h3><div class="bg-pink-600 px-2 py-1 rounded text-xs mt-2">INSTAGRAM</div></a>
+                <a href="https://www.instagram.com/m_k_king05?igsh=MWxpOTE4eXh5eXBxbw==" target="_blank" class="tilt-card glass-panel p-4 md:p-6 rounded-xl flex flex-col items-center justify-center group h-48 md:h-64 cursor-pointer text-white no-underline relative overflow-hidden"><div class="absolute inset-0 bg-purple-600 opacity-0 group-hover:opacity-10 transition"></div><i class="fa-brands fa-instagram text-5xl md:text-7xl text-purple-500 mb-4"></i><h3 class="font-bold">M K King</h3><div class="bg-purple-600 px-2 py-1 rounded text-xs mt-2">MK INSTA</div></a>
+                <a href="https://www.facebook.com/sunillive01" target="_blank" class="tilt-card glass-panel p-4 md:p-6 rounded-xl flex flex-col items-center justify-center group h-48 md:h-64 cursor-pointer text-white no-underline relative overflow-hidden"><div class="absolute inset-0 bg-blue-600 opacity-0 group-hover:opacity-10 transition"></div><i class="fa-brands fa-facebook text-5xl md:text-7xl text-blue-500 mb-4"></i><h3 class="font-bold">Sunil live</h3><div class="bg-blue-600 px-2 py-1 rounded text-xs mt-2">FACEBOOK</div></a>
+                <a href="https://whatsapp.com/channel/0029VabHNnF6mYPQ8IEHex0N" target="_blank" class="tilt-card glass-panel p-4 md:p-6 rounded-xl flex flex-col items-center justify-center group h-48 md:h-64 cursor-pointer text-white no-underline relative overflow-hidden"><div class="absolute inset-0 bg-green-600 opacity-0 group-hover:opacity-10 transition"></div><i class="fa-brands fa-whatsapp text-5xl md:text-7xl text-green-500 mb-4"></i><h3 class="font-bold">WhatsApp 1</h3><div class="bg-green-600 px-2 py-1 rounded text-xs mt-2">JOIN</div></a>
+                <a href="https://whatsapp.com/channel/0029VaoUCv789inb6czXFq27" target="_blank" class="tilt-card glass-panel p-4 md:p-6 rounded-xl flex flex-col items-center justify-center group h-48 md:h-64 cursor-pointer text-white no-underline relative overflow-hidden"><div class="absolute inset-0 bg-teal-600 opacity-0 group-hover:opacity-10 transition"></div><i class="fa-brands fa-whatsapp text-5xl md:text-7xl text-teal-500 mb-4"></i><h3 class="font-bold">WhatsApp 2</h3><div class="bg-teal-600 px-2 py-1 rounded text-xs mt-2">JOIN</div></a>
+            </div>
+        </section>
+
+        <section id="daily-blog" class="mb-32">
+            <div class="container mx-auto px-4 max-w-4xl">
+                <div class="glass-panel p-8 rounded-xl border-2 border-purple-500/50 shadow-[0_0_30px_rgba(168,85,247,0.2)] relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-purple-600/20 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                    <h2 class="text-3xl font-bold text-white mb-6 flex items-center gap-3 relative z-10"><i class="fa-solid fa-newspaper text-purple-400"></i> DAILY <span class="text-purple-500">NEWS</span></h2>
+                    <div id="blogContainer" class="relative z-10">
+                        <div id="blogLoading" class="flex flex-col items-center justify-center py-10 space-y-4">
+                            <div class="flex gap-2"><div class="w-3 h-3 bg-purple-500 rounded-full animate-bounce"></div><div class="w-3 h-3 bg-purple-500 rounded-full animate-bounce delay-100"></div><div class="w-3 h-3 bg-purple-500 rounded-full animate-bounce delay-200"></div></div>
+                            <p class="text-purple-300 text-sm animate-pulse">Fetching latest tips...</p>
+                        </div>
+                        <div id="dailyBlogContent" class="hidden text-gray-300 space-y-4 leading-relaxed"></div>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-gray-700 flex justify-between items-center text-xs text-gray-500 relative z-10">
+                        <span>Updated: <span id="blogDate">Today</span></span>
+                        <button onclick="forceNewBlog()" class="text-purple-400 hover:text-white flex items-center gap-1 transition"><i class="fa-solid fa-rotate"></i> Refresh</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-cyan-900/30 bg-black/40 backdrop-blur-md text-center py-10 relative z-10">
+        <p class="text-2xl font-bold font-orbitron mb-4">SUNIL <span class="text-cyan-500">LIVE</span> ESPORTS</p>
+        <div class="flex justify-center gap-6 mb-6">
+            <a href="https://youtube.com/@sunillive01?si=Dv-LOox3ZH2rzfI0" target="_blank" class="btn-3d-glass w-12 h-12 flex items-center justify-center rounded-full border-none bg-black/30 hover:text-white"><i class="fa-brands fa-youtube"></i></a>
+            <a href="https://www.instagram.com/sunil_live_1?igsh=MXF5cnY3NHh4dTl5aA==" target="_blank" class="btn-3d-glass w-12 h-12 flex items-center justify-center rounded-full border-none bg-black/30 hover:text-white"><i class="fa-brands fa-instagram"></i></a>
+            <a href="https://www.facebook.com/sunillive01" target="_blank" class="btn-3d-glass w-12 h-12 flex items-center justify-center rounded-full border-none bg-black/30 hover:text-white"><i class="fa-brands fa-facebook"></i></a>
+        </div>
+        <div class="flex flex-col items-center gap-2"><span class="bg-gray-800 text-gray-400 px-3 py-1 rounded text-xs border border-gray-700 font-bold">18+ ONLY • PLAY RESPONSIBLY</span><p class="text-gray-400 text-sm">&copy; 2024 Sunil Live. All Rights Reserved.</p></div>
+    </footer>
+
+    <div id="regModal" class="hidden fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel p-6 rounded-2xl border-2 border-cyan-500 w-full max-w-lg max-h-[95vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-black text-white italic">JOIN <span class="text-cyan-500" id="modalGameName">MATCH</span></h3>
+                <button onclick="closeForm()" class="text-gray-400 hover:text-white bg-gray-800 rounded-full w-10 h-10 flex items-center justify-center text-xl hover:bg-red-600 transition"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="mb-6 rounded-lg overflow-hidden border border-cyan-500/30 shadow-lg relative bg-black">
+                <div class="absolute top-2 left-2 z-10 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded animate-pulse">HOW TO JOIN</div>
+                <div class="video-container">
+                    <iframe src="https://www.youtube.com/embed/z3Zb1HoiZkA?rel=0&modestbranding=1" title="Join Guide" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            </div>
+            
+            <form onsubmit="event.preventDefault(); sendFormToSheet();" class="space-y-5" id="regForm">
+                <div id="formStatus" class="p-3 bg-red-900/40 text-red-400 text-sm font-bold rounded hidden border border-red-500 mb-4"></div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-1"><label class="text-gray-400 text-xs font-bold uppercase ml-1">Player Name</label><input name="name" id="playerName" class="w-full bg-black/50 border border-gray-600 p-3 text-white rounded focus:border-cyan-500 outline-none text-base transition focus:bg-black/70" placeholder="Enter Your Name (Letters Only)" oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g, ''); checkFormValidity();" required></div>
+                    <div class="space-y-1"><label class="text-gray-400 text-xs font-bold uppercase ml-1">Free Fire In-Game Name</label><input name="ign" id="playerIGN" class="w-full bg-black/50 border border-gray-600 p-3 text-white rounded focus:border-cyan-500 outline-none text-base transition focus:bg-black/70" placeholder="e.g. ⚡Sᴋ᭄Sᴜɴɪʟ" oninput="checkFormValidity();" required></div>
+                    <div class="space-y-1"><label class="text-gray-400 text-xs font-bold uppercase ml-1">Free Fire UID</label><input name="uid" id="playerUID" class="w-full bg-black/50 border border-gray-600 p-3 text-white rounded focus:border-cyan-500 outline-none text-base transition focus:bg-black/70" placeholder="Game ID (Digits)" oninput="this.value = this.value.replace(/[^0-9]/g, ''); checkFormValidity();" required></div>
+                    <div class="space-y-1"><label class="text-gray-400 text-xs font-bold uppercase ml-1">WhatsApp Number</label><input name="whatsapp" id="playerWA" class="w-full bg-black/50 border border-gray-600 p-3 text-white rounded focus:border-cyan-500 outline-none text-base transition focus:bg-black/70" placeholder="Mobile No." type="number" oninput="checkFormValidity();" required></div>
+                </div>
+
+                <div class="bg-gray-900/60 p-4 rounded-xl border border-gray-700 mt-2">
+                    <div class="flex flex-col gap-4">
+                        <div class="flex flex-col sm:flex-row gap-5 items-center">
+                            <div class="bg-white p-2 rounded-lg w-32 h-32 flex-shrink-0 shadow-lg border-2 border-white"><img src="13208.jpg" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3596/3596091.png'" class="w-full h-full object-contain"></div>
+                            <div class="flex-1 space-y-3 w-full">
+                                <div class="flex justify-between text-xs text-cyan-400 uppercase font-bold border-b border-gray-700 pb-2"><span>Entry Fee: <span class="text-white text-lg ml-1">₹50</span></span><span>Scan & Pay</span></div>
+                                
+                                <p class="text-[10px] text-gray-500 font-bold uppercase mt-1">Optional: Direct Pay</p>
+                                <div class="flex gap-2">
+                                    <a href="#" id="gpayBtn" class="flex-1 bg-black border border-gray-600 text-white py-2 rounded text-center text-xs font-bold hover:bg-gray-800 transition flex items-center justify-center gap-2"><i class="fa-brands fa-google-pay text-lg"></i> Google Pay</a>
+                                    <a href="#" id="phonepeBtn" class="flex-1 bg-purple-900 border border-purple-600 text-white py-2 rounded text-center text-xs font-bold hover:bg-purple-800 transition flex items-center justify-center gap-2"><i class="fa-solid fa-mobile-screen-button"></i> PhonePe</a>
+                                </div>
+
+                                <div class="space-y-1"><label class="text-gray-500 text-[10px] uppercase font-bold">Your UPI ID (Optional)</label><input name="upi" id="winningUPI" class="w-full bg-black/50 border border-yellow-600/50 p-3 text-yellow-300 rounded focus:border-yellow-500 outline-none text-sm placeholder-yellow-800" placeholder="e.g. 9876543210@paytm"></div>
+
+                                <div class="space-y-1"><label class="text-gray-500 text-[10px] uppercase font-bold">Transaction ID / UTR (Digits Only)</label><input name="txn" id="txnID" class="w-full bg-green-900/20 border border-green-600/50 p-3 text-white rounded focus:border-green-500 outline-none text-sm font-mono tracking-wider placeholder-green-800" placeholder="Enter 12 Digit UTR Number" oninput="this.value = this.value.replace(/[^0-9]/g, ''); checkFormValidity();" required></div>
+                            </div>
+                        </div>
+                        
+                        <div class="border-t border-gray-700 pt-3">
+                            <label class="text-gray-400 text-xs font-bold uppercase ml-1 block mb-2">Add Your Payment Screen Shot <span class="text-red-500">*</span></label>
+                            <input type="file" id="paymentScreenshot" accept="image/*" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-cyan-900 file:text-cyan-300 hover:file:bg-cyan-800" onchange="checkFormValidity()" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 mt-4 bg-black/40 p-3 rounded border border-gray-700 hover:border-gray-500 transition cursor-pointer select-none" onclick="document.getElementById('ageConsent').click()">
+                    <input type="checkbox" id="ageConsent" class="accent-cyan-500 cursor-pointer w-5 h-5" required onclick="event.stopPropagation(); checkFormValidity();">
+                    <label for="ageConsent" class="text-sm text-gray-300 cursor-pointer">I confirm I am <strong class="text-white">18+ years old</strong> & agree to rules.</label>
+                </div>
+                
+                <button type="submit" id="submitBtn" disabled class="w-full btn-3d-cyan py-4 font-black text-xl mt-4 shadow-[0_0_20px_rgba(6,182,212,0.4)] tracking-widest hover:scale-[1.02] active:scale-95 transition transform rounded-lg flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-lock" id="btnIcon"></i> <span>FILL ALL DETAILS</span>
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="confirmationModal" class="hidden fixed inset-0 z-[101] bg-black/95 backdrop-blur-lg flex items-center justify-center p-4">
+        <div class="glass-panel p-8 rounded-2xl border-2 border-green-500 w-full max-w-sm text-center shadow-[0_0_50px_rgba(34,197,94,0.5)]">
+            <i class="fa-solid fa-circle-check text-green-500 text-6xl mb-4 animate-bounce"></i>
+            <h3 class="text-2xl font-black text-white mb-2">REGISTRATION PENDING</h3>
+            <p class="text-sm text-gray-300 mb-4">Aapka form submit ho gaya hai, lekin verification abhi pending hai.</p>
+            
+            <div class="bg-black/30 p-4 rounded border border-green-500/50 mb-6 text-left space-y-2">
+                <p class="text-sm text-white"><strong class="text-yellow-400">LAST STEP:</strong> Payment ka screenshot humare <strong>WhatsApp Channel</strong> par bhejein.</p>
+                <p class="text-xs text-gray-400 italic">Screenshot milte hi aapko Match ID aur Password mil jayega.</p>
+            </div>
+
+            <button onclick="window.open('https://whatsapp.com/channel/0029VabHNnF6mYPQ8IEHex0N', '_blank'); closeConfirmationModal();" class="btn-3d-cyan py-3 px-6 text-sm font-black w-full" style="background: linear-gradient(to bottom, #25D366, #128C7E); box-shadow: 0px 4px 0px 0px #075E54, 0px 0px 15px rgba(37, 211, 102, 0.6);">
+                <i class="fa-brands fa-whatsapp mr-2"></i> SEND SCREENSHOT NOW
+            </button>
+            <button onclick="closeConfirmationModal()" class="mt-4 text-gray-500 hover:text-white text-xs">Close</button>
+        </div>
+    </div>
+
+    <div id="nameModal" class="hidden fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel p-6 w-11/12 max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-white text-xl font-black flex items-center gap-2"><i class="fa-solid fa-bolt text-yellow-500"></i> PRO NAME GEN</h2>
+                <button onclick="document.getElementById('nameModal').classList.add('hidden')" class="text-gray-400 hover:text-white bg-gray-800 rounded-full w-8 h-8 flex items-center justify-center text-lg hover:bg-red-600 transition"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input id="baseName" class="w-full bg-black/50 border border-gray-600 p-3 text-white rounded focus:border-cyan-500 outline-none" placeholder="Your Basic Name (e.g., Sunil)" required>
+            <select id="nameStyle" class="w-full bg-black/50 border border-gray-600 p-3 mt-4 text-white rounded focus:border-cyan-500 outline-none">
+                <option value="Aggressive">Aggressive & Killer</option>
+                <option value="Royal">Royal & King</option>
+                <option value="Cyber">Cyber & Neon</option>
+            </select>
+            <button onclick="generateName()" class="btn-3d-cyan w-full mt-4 py-3 font-black text-sm tracking-widest">GENERATE NAMES</button>
+            <div id="generatedNamesList" class="text-white mt-6 bg-black/50 p-4 rounded border border-cyan-500/50 min-h-[100px] flex items-center justify-center text-center text-sm">Enter your name and style to generate suggestions.</div>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = ""; 
+        // ⚠️ IMPORTANT: Paste your NEW Web App URL here after redeploying Apps Script
+        const scriptURL = "https://script.google.com/macros/s/AKfycbyRwEzvkMGvJ2SwiJ7JIs-OoX1rMBFCqZkUHFdm2oebVeJPAVcxPUZzRY-_mHH8nWWRkA/exec"; 
+
+        const myUPI = "6394562344-@ybl"; 
+        const myName = "SunilLiveEsports";
+        const amount = "50";
+
+        function setupPaymentLinks() {
+            const gpayBtn = document.getElementById('gpayBtn');
+            const phonepeBtn = document.getElementById('phonepeBtn');
+            if (gpayBtn && phonepeBtn) {
+                const upiLink = `upi://pay?pa=${myUPI}&pn=${myName}&am=${amount}&cu=INR`;
+                gpayBtn.href = upiLink;
+                phonepeBtn.href = upiLink;
+            }
+        }
+        setupPaymentLinks();
+
+        function checkFormValidity() {
+            const name = document.getElementById('playerName').value.trim();
+            const ign = document.getElementById('playerIGN').value.trim();
+            const uid = document.getElementById('playerUID').value.trim();
+            const wa = document.getElementById('playerWA').value.trim();
+            const txn = document.getElementById('txnID').value.trim();
+            const age = document.getElementById('ageConsent').checked;
+            const file = document.getElementById('paymentScreenshot').files.length > 0;
+            const btn = document.getElementById('submitBtn');
+            const btnIcon = document.getElementById('btnIcon');
+            const btnText = btn.querySelector('span');
+
+            // Updated Logic: File is mandatory for UI unlock, but not uploaded to sheet
+            const isValid = name && ign && uid && wa && txn.length === 12 && age && file;
+
+            if (isValid) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-70', 'cursor-not-allowed');
+                btnIcon.classList.remove('fa-lock');
+                btnIcon.classList.add('fa-rocket');
+                btnText.innerText = "VERIFY & JOIN NOW";
+            } else {
+                btn.disabled = true;
+                btnIcon.classList.remove('fa-rocket');
+                btnIcon.classList.add('fa-lock');
+                btnText.innerText = "FILL ALL DETAILS TO UNLOCK";
+            }
+        }
+
+        function closeConfirmationModal() { document.getElementById('confirmationModal').classList.add('hidden'); }
+        function openForm(gameName) { 
+            document.getElementById('modalGameName').innerText = gameName; 
+            document.getElementById('regModal').classList.remove('hidden'); 
+            document.getElementById('formStatus').classList.add('hidden'); 
+            checkFormValidity();
+        }
+        function closeForm() { document.getElementById('regModal').classList.add('hidden'); }
+        function openNameGen() { document.getElementById('nameModal').classList.remove('hidden'); }
+        
+        function scrollToMatches() {
+            const matchesSection = document.getElementById('tournaments');
+            if (matchesSection) {
+                matchesSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // --- SIMPLE TEXT SUBMISSION (Fast Mode) ---
+        async function sendFormToSheet() {
+            const btn = document.getElementById('submitBtn');
+            const statusBox = document.getElementById('formStatus');
+            const txn = document.getElementById('txnID').value;
+
+            if (!/^\d{12}$/.test(txn)) {
+                statusBox.innerText = "⚠️ Transaction ID must be exactly 12 digits.";
+                statusBox.classList.remove('hidden');
+                return;
+            }
+
+            statusBox.classList.add('hidden');
+            btn.innerHTML = "SUBMITTING... ⏳";
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('date', new Date().toLocaleString());
+            formData.append('name', document.getElementById('playerName').value);
+            formData.append('ign', document.getElementById('playerIGN').value);
+            formData.append('uid', document.getElementById('playerUID').value);
+            formData.append('whatsapp', document.getElementById('playerWA').value);
+            formData.append('game', document.getElementById('modalGameName').innerText);
+            
+            // Here we correctly get the USER's UPI from the input field
+            const userUpiInput = document.getElementById('winningUPI').value;
+            formData.append('upi', userUpiInput ? userUpiInput : "Not Provided"); 
+            
+            formData.append('txn', txn);
+            
+            // Fast submit without image upload (image is checked client-side only)
+            try {
+                if(scriptURL && scriptURL.includes('script.google.com')) {
+                    const sheetRes = await fetch(scriptURL, { method: 'POST', body: formData });
+                }
+            } catch (error) {
+                console.error('Sheet Error:', error);
+            }
+
+            closeForm();
+            document.getElementById('confirmationModal').classList.remove('hidden');
+
+            // Reset form
+            document.getElementById('regForm').reset();
+            btn.innerHTML = '<i class="fa-solid fa-lock" id="btnIcon"></i> <span>FILL ALL DETAILS</span>';
+            btn.disabled = true;
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const color = type === 'error' ? 'bg-red-600' : (type === 'warn' ? 'bg-yellow-600' : 'bg-green-600');
+            const icon = type === 'error' ? 'fa-triangle-exclamation' : (type === 'warn' ? 'fa-exclamation-circle' : 'fa-check-circle');
+            const toast = document.createElement('div');
+            toast.className = `${color} text-white p-3 mb-2 rounded shadow-lg flex items-center gap-2 transition-opacity duration-300 animate-fade-in-down`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.remove('animate-fade-in-down'); toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        let scene, camera, renderer, terrain, fireParticles;
+        let cubes = [];
+        
+        function initThreeJS() {
+            const container = document.getElementById('canvas-container');
+            if (!container) return;
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.002);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.z = 100; camera.position.y = 50; camera.rotation.x = -0.2;
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+            const planeGeometry = new THREE.PlaneGeometry(1000, 1000, 40, 40);
+            const planeMaterial = new THREE.MeshBasicMaterial({ color: 0x06b6d4, wireframe: true, transparent: true, opacity: 0.15 });
+            terrain = new THREE.Mesh(planeGeometry, planeMaterial);
+            terrain.rotation.x = -Math.PI / 2; terrain.position.y = -50;
+            scene.add(terrain);
+            const boxGeometry = new THREE.BoxGeometry(4, 4, 4);
+            const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xfbbf24, wireframe: true });
+            for (let i = 0; i < 60; i++) {
+                const mesh = new THREE.Mesh(boxGeometry, boxMaterial);
+                mesh.position.x = (Math.random() - 0.5) * 400; mesh.position.y = Math.random() * 200 - 50; mesh.position.z = (Math.random() - 0.5) * 600 - 100;
+                mesh.userData = { speedY: Math.random() * 0.2 + 0.1, rotSpeed: Math.random() * 0.05 };
+                scene.add(mesh); cubes.push(mesh);
+            }
+            const fireGeo = new THREE.BufferGeometry();
+            const fireCount = 1500;
+            const firePos = new Float32Array(fireCount * 3);
+            for(let i=0; i<fireCount*3; i+=3) { firePos[i] = (Math.random() - 0.5) * 800; firePos[i+1] = -100 + Math.random() * 200; firePos[i+2] = (Math.random() - 0.5) * 800; }
+            fireGeo.setAttribute('position', new THREE.BufferAttribute(firePos, 3));
+            const fireMat = new THREE.PointsMaterial({ size: 2, color: 0xff4500, transparent: true, opacity: 0.8 });
+            fireParticles = new THREE.Points(fireGeo, fireMat);
+            scene.add(fireParticles);
+            animate();
+        }
+
+        let scrollY = 0;
+        window.addEventListener('scroll', () => { scrollY = window.scrollY; });
+        let mouseX = 0, mouseY = 0;
+        document.addEventListener('mousemove', (e) => { mouseX = (e.clientX - window.innerWidth/2) * 0.05; mouseY = (e.clientY - window.innerHeight/2) * 0.05; });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const targetZ = 100 - scrollY * 0.2; camera.position.z += (targetZ - camera.position.z) * 0.05;
+            camera.position.x += (mouseX - camera.position.x) * 0.02;
+            if (terrain) terrain.position.z = camera.position.z - 200;
+            cubes.forEach(cube => {
+                cube.position.y -= cube.userData.speedY; cube.rotation.x += cube.userData.rotSpeed; cube.rotation.y += cube.userData.rotSpeed;
+                if (cube.position.y < -60) { cube.position.y = 100; cube.position.x = camera.position.x + (Math.random() - 0.5) * 300; cube.position.z = camera.position.z - 200 - Math.random() * 200; }
+            });
+            if(fireParticles) { fireParticles.rotation.y += 0.001; }
+            renderer.render(scene, camera);
+        }
+        
+        window.addEventListener('resize', () => { if (camera && renderer) { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); } });
+        document.addEventListener('DOMContentLoaded', () => { initThreeJS(); loadDailyBlog(); initTilt(); });
+
+        function initTilt() {
+            document.querySelectorAll('.tilt-card').forEach(c => {
+                c.addEventListener('mousemove', e => { const r = c.getBoundingClientRect(); c.style.transform = `perspective(1000px) rotateX(${((e.clientY-r.top-r.height/2)/r.height/2)*-25}deg) rotateY(${((e.clientX-r.left-r.width/2)/r.width/2)*25}deg) scale(1.05)`; });
+                c.addEventListener('mouseleave', () => c.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale(1)');
+            });
+        }
+
+        const fakes = ["Rocky", "Killer", "Devil", "God", "Sniper", "Venom", "Beast", "Shadow"];
+        setInterval(() => {
+            const list = document.getElementById('joinersList');
+            if(list) {
+                const div = document.createElement('div');
+                div.className="flex items-center gap-3 bg-gray-900/80 p-2 rounded-lg animate-fade-in-down border border-green-500/50 shadow-lg backdrop-blur-sm";
+                div.innerHTML=`<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}" class="w-8 h-8 rounded-full border border-green-500 bg-gray-800"><div class="flex-1"><p class="text-xs font-bold text-white uppercase tracking-wider">${fakes[Math.floor(Math.random()*fakes.length)]}</p><p class="text-[10px] text-green-400 font-bold">JOINED WAR</p></div>`;
+                list.insertBefore(div, list.children[0]);
+                if(list.children.length > 3) list.removeChild(list.lastElementChild);
+            }
+        }, 5000);
+
+        async function loadDailyBlog() {
+            const key = 'blog-' + new Date().toDateString();
+            const storedBlog = localStorage.getItem(key);
+            const loadingEl = document.getElementById('blogLoading');
+            const contentEl = document.getElementById('dailyBlogContent');
+
+            if (!loadingEl || !contentEl) { return; }
+
+            if (storedBlog) { contentEl.innerHTML = storedBlog; contentEl.classList.remove('hidden'); loadingEl.classList.add('hidden'); return; }
+            loadingEl.classList.remove('hidden'); contentEl.classList.add('hidden');
+
+            try {
+                let data = null;
+                const delays = [1000, 2000, 4000, 8000, 16000];
+                for (let i = 0; i < 5; i++) {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, { 
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ contents: [{ parts: [{ text: "Generate a Daily Free Fire Tip in valid JSON format. Fields: 'title' (catchy headline in Hinglish), 'content' (2-3 lines advice in Hinglish), 'image_prompt' (short english description for an image generator like 'free fire character with shotgun'), 'video_query' (short youtube search query like 'Free Fire headshot trick'). Do not use markdown formatting. Use JSON." }] }] }) 
+                    });
+                    if (res.ok) { data = await res.json(); break; } if (i < 4) await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+                if (!data || !data.candidates || !data.candidates[0].content) throw new Error("API content missing.");
+                const jsonText = data.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim();
+                const blogData = JSON.parse(jsonText);
+                const html = `<div class="bg-black/50 rounded-xl overflow-hidden border border-purple-500/30 shadow-2xl"><div class="h-64 overflow-hidden relative group"><img src="https://image.pollinations.ai/prompt/${encodeURIComponent(blogData.image_prompt)}?nologo=true" class="w-full h-full object-cover transition duration-500 group-hover:scale-110" onerror="this.src='https://placehold.co/600x400/1a1a2e/8b5cf6?text=AI+Image+Tip'" alt="Daily Tip Image"><div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div><div class="absolute bottom-2 left-3"><span class="bg-purple-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase">🔥 Tip of the Day</span></div></div><div class="p-5"><h3 class="text-xl font-bold text-white mb-2">${blogData.title}</h3><p class="text-gray-300 text-sm leading-relaxed mb-4">${blogData.content}</p><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(blogData.video_query)}" target="_blank" class="block w-full bg-red-600 hover:bg-red-700 text-white text-center py-3 rounded font-bold text-sm transition shadow-lg border-b-4 border-red-800 active:border-b-0 active:translate-y-1"><i class="fa-brands fa-youtube mr-2"></i> WATCH TUTORIAL VIDEO</a></div></div>`;
+                contentEl.innerHTML = html; contentEl.classList.remove('hidden'); loadingEl.classList.add('hidden'); localStorage.setItem(key, html);
+            } catch(e) { console.error("Blog load error:", e); loadingEl.innerHTML = "<p class='text-red-500'>Failed to load news. (API Error)</p>"; contentEl.classList.remove('hidden'); loadingEl.classList.add('hidden'); }
+        }
+        function forceNewBlog() { localStorage.removeItem('blog-' + new Date().toDateString()); loadDailyBlog(); }
+
+        async function copyToClipboard(text, element) {
+            try { await navigator.clipboard.writeText(text); showCopySuccess(element); } catch (err) {
+                const textarea = document.createElement('textarea'); textarea.value = text; textarea.style.position = 'fixed'; textarea.style.opacity = '0'; document.body.appendChild(textarea); textarea.select();
+                try { document.execCommand('copy'); showCopySuccess(element); } catch (err) { console.error('Copy failed', err); showToast('Failed to copy', 'error'); } finally { document.body.removeChild(textarea); }
+            }
+        }
+        function showCopySuccess(element) { const originalHTML = element.innerHTML; element.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> COPIED!`; setTimeout(() => { element.innerHTML = originalHTML; }, 2000); showToast('Copied to Clipboard!', 'success'); }
+
+        async function generateName() {
+            const n = document.getElementById('baseName').value; const style = document.getElementById('nameStyle').value; const ansBox = document.getElementById('generatedNamesList'); if(!n) return;
+            ansBox.innerHTML = "<i class='fa-solid fa-pen-nib fa-spin'></i> Names generate ho rahe hain...";
+            try {
+                let data = null; const delays = [1000, 2000, 4000, 8000, 16000];
+                for (let i = 0; i < 5; i++) {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, { 
+                        method: 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ contents:[{parts:[{text: `Generate 5 stylish Free Fire competitive nicknames based on the name "${n}" with a "${style}" theme. Use cool symbols like '⚡','亗','ᴋɪɴɢ','ᴮᴼˢˢ','࿐' and modern gaming fonts. Return only the 5 names, each on a new line.`}]}] }) 
+                    });
+                    if (res.ok) { data = await res.json(); break; } if (i < 4) await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+                if (!data || !data.candidates || !data.candidates[0].content) throw new Error("API content missing.");
+                const rawText = data.candidates[0].content.parts[0].text; const names = rawText.split('\n').map(name => name.trim()).filter(name => name.length > 0 && !name.startsWith('*'));
+                const listHTML = names.map(name => { const cleanName = name.replace(/`/g, ''); return `<div class="bg-black/50 p-3 mt-2 rounded text-cyan-400 font-mono text-center cursor-pointer hover:bg-cyan-900/50 transition border border-cyan-500/50 text-base flex items-center justify-between" onclick="copyName(this, '${cleanName}')" data-name="${cleanName}"><span class="name-text">${cleanName}</span> <i class="fa-regular fa-copy text-xs text-gray-500"></i></div>`; }).join('');
+                ansBox.innerHTML = listHTML || "Error generating names (Check API Key).";
+            } catch(e) { console.error("Name Gen Error:", e); document.getElementById('generatedNamesList').innerHTML = "Error generating names (API Error)."; }
+        }
+        function copyName(element, name) { copyToClipboard(name, element); }
+
+        let isHindi = false;
+        const translations = { 'join_war': { en: 'JOIN WAR', hi: 'WAR MEIN AAYEIN' }, 'welcome_to': { en: 'WELCOME TO', hi: 'SWAAGAT HAI' }, 'hero_desc': { en: 'The Ultimate Free Fire Tournament Platform.', hi: 'Sabse Bada Free Fire Tournament Platform.' }, 'view_matches': { en: 'VIEW MATCHES', hi: 'MATCHES DEKHEIN' }, 'tourney_details': { en: 'DETAILS', hi: 'JAANKARI' }, 'age_policy_title': { en: 'Strictly 18+ Only', hi: 'Sirf 18+ Ke Liye' }, 'age_policy_text': { en: 'Is tournament mein hissa lene ke liye aapki umar 18 saal ya usse zyada honi chahiye.', hi: 'Is tournament mein hissa lene ke liye aapki umar 18 saal ya usse zyada honi chahiye.' }, 'offline_title': { en: 'OFFLINE LAN EVENT', hi: 'OFFLINE LAN EVENT' }, 'need_name': { en: 'Need a name? Use', hi: 'Naam chahiye? Ise istemaal karein:' } };
+        function toggleLanguage() {
+            isHindi = !isHindi; const lang = isHindi ? 'hi' : 'en'; document.getElementById('currentLang').innerText = isHindi ? 'HI' : 'EN'; document.documentElement.lang = isHindi ? 'hi' : 'en';
+            document.querySelectorAll('[data-key]').forEach(el => { const key = el.getAttribute('data-key'); if(translations[key]) { el.innerText = translations[key][lang]; } });
+        }
+    </script>
+</body>
+</html>
